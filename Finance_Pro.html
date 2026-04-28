@@ -1,0 +1,2671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finance Pro — Personal Debt & Savings Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg:         #0A0D14;
+  --bg2:        #0F1320;
+  --bg3:        #151A28;
+  --card:       #1A2035;
+  --card2:      #1E2640;
+  --border:     #252D45;
+  --border2:    #2E3850;
+  --accent:     #00E5A0;
+  --accent2:    #0099FF;
+  --accent3:    #FF6B35;
+  --accent4:    #FFD166;
+  --danger:     #FF4757;
+  --text:       #E8EDF5;
+  --text2:      #8A93A8;
+  --text3:      #4A5268;
+  --income:     #00E5A0;
+  --expense:    #FF4757;
+  --locked:     #0099FF;
+  --flexible:   #FFD166;
+  --r:          8px;
+  --r2:         14px;
+  --shadow:     0 4px 24px rgba(0,0,0,0.4);
+  --shadow2:    0 8px 40px rgba(0,0,0,0.6);
+  --mono:       'Space Mono', monospace;
+  --sans:       'Syne', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── GRID BACKGROUND ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10,13,20,0.92);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-mark {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 0 20px rgba(0,229,160,0.3);
+}
+
+.logo-text {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.logo-text span { color: var(--accent); }
+
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+
+.month-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  padding: 6px 14px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--accent4);
+}
+
+.month-selector input[type="month"] {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--accent4);
+  font-family: var(--mono);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.month-selector input[type="month"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) sepia(1) saturate(3) hue-rotate(10deg);
+  cursor: pointer;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 20px;
+  border-radius: var(--r);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  text-decoration: none;
+  letter-spacing: 0.3px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), #00C87A);
+  color: #0A0D14;
+  box-shadow: 0 0 20px rgba(0,229,160,0.25);
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 24px rgba(0,229,160,0.4); }
+
+.btn-secondary {
+  background: var(--card2);
+  color: var(--text);
+  border: 1px solid var(--border2);
+}
+.btn-secondary:hover { background: var(--border); }
+
+.btn-danger {
+  background: rgba(255,71,87,0.15);
+  color: var(--danger);
+  border: 1px solid rgba(255,71,87,0.3);
+}
+.btn-danger:hover { background: rgba(255,71,87,0.25); }
+
+/* ── NAV TABS ── */
+.nav-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 16px 32px 0;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  z-index: 1;
+}
+
+.nav-tab {
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-tab:hover { color: var(--text); }
+.nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.tab-badge {
+  background: var(--accent);
+  color: #0A0D14;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 20px;
+  font-family: var(--mono);
+}
+
+/* ── MAIN LAYOUT ── */
+.main { padding: 28px 32px; position: relative; z-index: 1; }
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── DASHBOARD ── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.kpi-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 20px 22px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.kpi-card:hover { border-color: var(--border2); }
+
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+}
+.kpi-card.green::before { background: linear-gradient(90deg, var(--accent), transparent); }
+.kpi-card.blue::before  { background: linear-gradient(90deg, var(--accent2), transparent); }
+.kpi-card.orange::before{ background: linear-gradient(90deg, var(--accent3), transparent); }
+.kpi-card.yellow::before{ background: linear-gradient(90deg, var(--accent4), transparent); }
+
+.kpi-glow {
+  position: absolute;
+  width: 100px; height: 100px;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.12;
+  top: -20px; right: -20px;
+}
+.kpi-card.green .kpi-glow  { background: var(--accent); }
+.kpi-card.blue .kpi-glow   { background: var(--accent2); }
+.kpi-card.orange .kpi-glow { background: var(--accent3); }
+.kpi-card.yellow .kpi-glow { background: var(--accent4); }
+
+.kpi-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--text2);
+  margin-bottom: 10px;
+}
+
+.kpi-value {
+  font-family: var(--mono);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.kpi-card.green  .kpi-value { color: var(--accent); }
+.kpi-card.blue   .kpi-value { color: var(--accent2); }
+.kpi-card.orange .kpi-value { color: var(--accent3); }
+.kpi-card.yellow .kpi-value { color: var(--accent4); }
+
+.kpi-sub {
+  font-size: 12px;
+  color: var(--text3);
+  font-family: var(--mono);
+}
+
+.kpi-sub b { color: var(--text2); }
+
+/* ── TWO COLUMN LAYOUT ── */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panel-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-body { padding: 20px; }
+
+/* ── SNAPSHOT TABLE ── */
+.snapshot-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.snapshot-row:last-child { border-bottom: none; }
+.snapshot-row.total {
+  padding-top: 14px;
+  margin-top: 4px;
+}
+
+.snapshot-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text2);
+}
+
+.snapshot-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.snapshot-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.snapshot-pct {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--text3);
+  width: 44px;
+  text-align: right;
+}
+
+.snapshot-amt {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+  width: 110px;
+  text-align: right;
+}
+
+.snapshot-bar-wrap {
+  width: 80px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.snapshot-bar { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+
+/* ── SAFETY BAR CONTROL ── */
+.safety-control {
+  padding: 20px;
+}
+
+.safety-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.safety-pct {
+  font-family: var(--mono);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--accent4);
+}
+
+.safety-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  outline: none;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+.safety-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--accent4);
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(255,209,102,0.5);
+  transition: box-shadow 0.2s;
+}
+.safety-slider::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 20px rgba(255,209,102,0.7);
+}
+
+.safety-desc {
+  font-size: 12px;
+  color: var(--text3);
+  line-height: 1.5;
+}
+
+.safety-desc b { color: var(--text2); }
+
+/* ── QUICK KILL ALERT ── */
+.qk-card {
+  margin: 16px 20px;
+  background: rgba(255,71,87,0.08);
+  border: 1px solid rgba(255,71,87,0.2);
+  border-radius: var(--r);
+  padding: 14px 16px;
+}
+
+.qk-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--danger);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.qk-content { font-size: 13px; color: var(--text2); }
+.qk-content b { color: var(--text); }
+
+/* ── TABLES ── */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-table th {
+  text-align: left;
+  padding: 11px 14px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text3);
+  border-bottom: 2px solid var(--border2);
+  background: var(--bg3);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
+  vertical-align: middle;
+}
+
+.data-table tr:hover td { background: rgba(255,255,255,0.02); }
+.data-table tr:last-child td { border-bottom: none; }
+
+.data-table td.mono { font-family: var(--mono); }
+.data-table td.right { text-align: right; }
+
+/* ── BADGES ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.badge-income  { background: rgba(0,229,160,0.12);  color: var(--income); }
+.badge-expense { background: rgba(255,71,87,0.12);  color: var(--expense); }
+.badge-locked  { background: rgba(0,153,255,0.12);  color: var(--locked); }
+.badge-flexible{ background: rgba(255,209,102,0.12);color: var(--flexible); }
+.badge-yes     { background: rgba(0,229,160,0.12);  color: var(--income); }
+.badge-no      { background: rgba(138,147,168,0.12);color: var(--text2); }
+
+/* ── FORMS ── */
+.form-grid {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.form-grid-2 { grid-template-columns: 1fr 1fr; }
+.form-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+.form-grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+.field { display: flex; flex-direction: column; gap: 5px; }
+
+.field label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+
+.field input, .field select {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  padding: 9px 12px;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.field input:focus, .field select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0,229,160,0.1);
+}
+
+.field select option { background: var(--bg2); }
+
+.field input[type="date"] { color-scheme: dark; }
+
+/* ── DEBT CARD ── */
+.debt-card {
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 18px;
+  margin-bottom: 12px;
+  position: relative;
+  transition: border-color 0.2s;
+}
+.debt-card:hover { border-color: var(--border2); }
+
+.debt-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.debt-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+
+.debt-card-sub {
+  font-size: 12px;
+  color: var(--text3);
+  font-family: var(--mono);
+}
+
+.debt-priority {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.priority-1 { background: rgba(255,71,87,0.15);  color: var(--danger); border: 1px solid rgba(255,71,87,0.3); }
+.priority-2 { background: rgba(255,107,53,0.15); color: var(--accent3); border: 1px solid rgba(255,107,53,0.3); }
+.priority-3 { background: rgba(255,209,102,0.15);color: var(--accent4); border: 1px solid rgba(255,209,102,0.3); }
+.priority-4 { background: rgba(0,153,255,0.15);  color: var(--accent2); border: 1px solid rgba(0,153,255,0.3); }
+
+.debt-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.debt-stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text3);
+  margin-bottom: 3px;
+}
+
+.debt-stat-value {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.progress-wrap {
+  background: var(--border);
+  border-radius: 3px;
+  height: 5px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--accent2), var(--accent));
+  transition: width 0.8s ease;
+}
+
+/* ── GOALS ── */
+.goal-card {
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 18px;
+  margin-bottom: 12px;
+}
+
+.goal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.goal-name {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.goal-pct {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--accent4);
+  font-weight: 700;
+}
+
+.goal-bar-wrap {
+  background: var(--border);
+  border-radius: 4px;
+  height: 8px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.goal-bar {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--accent4), var(--accent3));
+  transition: width 0.8s ease;
+}
+
+.goal-stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text3);
+  font-family: var(--mono);
+}
+
+.goal-stats b { color: var(--text2); }
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text3);
+}
+
+.empty-state .icon { font-size: 36px; margin-bottom: 10px; }
+.empty-state p { font-size: 13px; }
+
+/* ── AVALANCHE BADGE ── */
+.avalanche-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: rgba(0,229,160,0.08);
+  border: 1px solid rgba(0,229,160,0.2);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+/* ── SECTION HEADER ── */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-title::after {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 1px;
+}
+
+/* ── SCROLLABLE TABLE CONTAINER ── */
+.table-wrap {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 600px;
+  border-radius: var(--r2);
+  border: 1px solid var(--border);
+}
+
+.table-wrap thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+/* ── INLINE EDIT ── */
+.inline-actions {
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+tr:hover .inline-actions { opacity: 1; }
+
+.icon-btn {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: var(--card);
+  color: var(--text2);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s;
+}
+.icon-btn:hover { background: var(--border); color: var(--text); }
+.icon-btn.del:hover { background: rgba(255,71,87,0.2); color: var(--danger); border-color: rgba(255,71,87,0.4); }
+.icon-btn.edit:hover { background: rgba(0,153,255,0.2); color: var(--accent2); border-color: rgba(0,153,255,0.4); }
+
+/* ── MODAL ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+
+.modal {
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-radius: var(--r2);
+  padding: 28px;
+  width: 520px;
+  max-width: 95vw;
+  box-shadow: var(--shadow2);
+  transform: translateY(12px);
+  transition: transform 0.2s;
+}
+.modal-overlay.open .modal { transform: translateY(0); }
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--card2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  padding: 12px 18px;
+  font-size: 13px;
+  z-index: 300;
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transform: translateY(80px);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { border-color: rgba(0,229,160,0.4); }
+.toast.success .toast-icon { color: var(--accent); }
+
+/* ── UTILS ── */
+.text-accent  { color: var(--accent); }
+.text-blue    { color: var(--accent2); }
+.text-orange  { color: var(--accent3); }
+.text-yellow  { color: var(--accent4); }
+.text-danger  { color: var(--danger); }
+.text-muted   { color: var(--text2); }
+.text-dim     { color: var(--text3); }
+.mono         { font-family: var(--mono); }
+.bold         { font-weight: 700; }
+.flex         { display: flex; align-items: center; }
+.gap-8        { gap: 8px; }
+.mt-4         { margin-top: 4px; }
+.mt-16        { margin-top: 16px; }
+.mb-16        { margin-bottom: 16px; }
+
+/* ── DIVIDER ── */
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 16px 0;
+}
+
+/* ── REPORT PREVIEW ── */
+.report-section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.report-section-title {
+  padding: 12px 20px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cat-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  background: var(--bg3);
+  color: var(--text2);
+  border: 1px solid var(--border);
+}
+
+/* ── SCROLLBAR ── */
+.balance-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--border2);
+  color: var(--danger);
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+  width: 120px;
+  outline: none;
+  padding: 2px 0;
+  transition: border-color 0.2s;
+}
+.balance-input:hover, .balance-input:focus {
+  border-bottom-color: var(--accent2);
+  background: rgba(0,153,255,0.05);
+  border-radius: 3px 3px 0 0;
+  padding: 2px 4px;
+}
+/* hide number spinners */
+.balance-input::-webkit-outer-spin-button,
+.balance-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.balance-input[type=number] { -moz-appearance: textfield; }
+
+
+/* ── INLINE EDIT CELLS ── */
+.ie {
+  outline: none;
+  border-radius: 4px;
+  padding: 3px 6px;
+  margin: -3px -6px;
+  transition: background 0.15s, box-shadow 0.15s;
+  cursor: text;
+  min-width: 40px;
+  display: inline-block;
+}
+.ie:hover { background: rgba(255,255,255,0.05); }
+.ie:focus {
+  background: rgba(0,153,255,0.1);
+  box-shadow: 0 0 0 1px var(--accent2);
+}
+.ie-num {
+  text-align: right;
+  font-family: var(--mono);
+  min-width: 80px;
+}
+.ie-select {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 12px;
+  padding: 3px 6px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.ie-select:focus { border-color: var(--accent2); }
+.ie-select option { background: var(--bg2); }
+/* hide native number spinners on ie inputs */
+td input[type=number]::-webkit-outer-spin-button,
+td input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+td input[type=number] { -moz-appearance: textfield; }
+td input[type=date], td input[type=number], td input[type=text] {
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--border2);
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  outline: none;
+  padding: 2px 2px;
+  width: 100%;
+  transition: border-color 0.15s, background 0.15s;
+}
+td input[type=date]:hover, td input[type=number]:hover, td input[type=text]:hover,
+td input[type=date]:focus, td input[type=number]:focus, td input[type=text]:focus {
+  border-bottom-color: var(--accent2);
+  background: rgba(0,153,255,0.06);
+  border-radius: 3px 3px 0 0;
+}
+td input[type=date] { color-scheme: dark; min-width: 110px; }
+td input[type=number] { min-width: 80px; }
+td input[type=text]   { min-width: 120px; }
+.field-changed { animation: flashSave 0.5s ease; }
+@keyframes flashSave {
+  0%   { background: rgba(0,229,160,0.2); }
+  100% { background: transparent; }
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+@keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+.tab-panel.active { animation: fadeIn 0.25s ease; }
+
+/* ── LIGHT THEME ── */
+[data-theme="light"] {
+  --bg:         #F0F4FA;
+  --bg2:        #E8EEF7;
+  --bg3:        #DDE5F0;
+  --card:       #FFFFFF;
+  --card2:      #F5F8FF;
+  --border:     #D0D9EC;
+  --border2:    #BBC6DE;
+  --text:       #1A2035;
+  --text2:      #4A5577;
+  --text3:      #8A95B0;
+  --shadow:     0 4px 24px rgba(0,0,0,0.1);
+  --shadow2:    0 8px 40px rgba(0,0,0,0.15);
+}
+
+[data-theme="light"] body::before {
+  background-image:
+    linear-gradient(rgba(0,153,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,153,255,0.04) 1px, transparent 1px);
+}
+
+[data-theme="light"] .topbar {
+  background: rgba(240,244,250,0.94);
+  border-bottom-color: var(--border);
+}
+
+[data-theme="light"] .kpi-card {
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+}
+
+[data-theme="light"] .kpi-card.green .kpi-glow  { opacity: 0.08; }
+[data-theme="light"] .kpi-card.blue .kpi-glow   { opacity: 0.08; }
+[data-theme="light"] .kpi-card.orange .kpi-glow { opacity: 0.08; }
+[data-theme="light"] .kpi-card.yellow .kpi-glow { opacity: 0.08; }
+
+[data-theme="light"] .data-table th { background: var(--bg3); color: var(--text3); }
+[data-theme="light"] .data-table tr:hover td { background: rgba(0,153,255,0.04); }
+
+[data-theme="light"] .cat-chip {
+  background: var(--bg3);
+  border-color: var(--border);
+  color: var(--text2);
+}
+
+[data-theme="light"] .badge-income   { background: rgba(0,180,120,0.12);  color: #007A52; }
+[data-theme="light"] .badge-expense  { background: rgba(220,50,50,0.1);   color: #C0392B; }
+[data-theme="light"] .badge-locked   { background: rgba(0,100,220,0.1);   color: #0055BB; }
+[data-theme="light"] .badge-flexible { background: rgba(180,130,0,0.1);   color: #8B6500; }
+[data-theme="light"] .badge-yes      { background: rgba(0,180,120,0.12);  color: #007A52; }
+[data-theme="light"] .badge-no       { background: rgba(100,100,100,0.1); color: #555; }
+
+[data-theme="light"] .field input,
+[data-theme="light"] .field select {
+  background: var(--bg2);
+  border-color: var(--border2);
+  color: var(--text);
+}
+
+[data-theme="light"] .modal {
+  background: var(--card);
+  border-color: var(--border2);
+}
+
+[data-theme="light"] .btn-secondary {
+  background: var(--bg3);
+  border-color: var(--border2);
+  color: var(--text);
+}
+[data-theme="light"] .btn-secondary:hover { background: var(--border); }
+
+[data-theme="light"] .ie-select {
+  background: var(--bg3);
+  border-color: var(--border2);
+  color: var(--text);
+}
+
+[data-theme="light"] .qk-card {
+  background: rgba(220,50,50,0.05);
+}
+
+[data-theme="light"] .month-selector {
+  background: var(--card);
+  border-color: var(--border2);
+}
+
+[data-theme="light"] .month-selector input[type="month"] {
+  color: #8B6500;
+}
+
+[data-theme="light"] .month-selector input[type="month"]::-webkit-calendar-picker-indicator {
+  filter: none;
+  opacity: 0.6;
+}
+
+[data-theme="light"] .safety-slider { background: var(--border2); }
+
+[data-theme="light"] td input[type=date],
+[data-theme="light"] td input[type=number],
+[data-theme="light"] td input[type=text] {
+  color: var(--text);
+  border-bottom-color: var(--border2);
+}
+
+[data-theme="light"] .balance-input { color: #C0392B; }
+
+[data-theme="light"] .toast {
+  background: var(--card);
+  border-color: var(--border2);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+[data-theme="light"] .debt-card,
+[data-theme="light"] .goal-card {
+  background: var(--card2);
+  border-color: var(--border);
+}
+
+[data-theme="light"] .panel { box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+
+[data-theme="light"] .nav-tabs { border-bottom-color: var(--border); }
+[data-theme="light"] .nav-tab:hover { color: var(--text); }
+
+[data-theme="light"] .modal-overlay { background: rgba(100,110,140,0.5); }
+
+/* theme toggle button */
+.theme-toggle {
+  width: 36px; height: 36px;
+  border-radius: var(--r);
+  background: var(--card);
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.theme-toggle:hover { background: var(--border); color: var(--text); transform: scale(1.05); }
+
+.th-sort { white-space: nowrap; }
+.th-sort:hover { color: var(--accent2) !important; }
+.sort-icon {
+  display: inline-block;
+  font-size: 10px;
+  color: var(--accent2);
+  margin-left: 4px;
+  transition: opacity 0.15s;
+}
+.sort-icon:empty { opacity: 0; }
+
+</style>
+</head>
+<body>
+
+<!-- ── TOPBAR ── -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-mark">₹</div>
+    <div class="logo-text">Finance<span>Pro</span></div>
+  </div>
+  <div class="topbar-right">
+    <div class="month-selector">
+      <span>📅</span>
+      <input type="month" id="reportMonth" value="2026-04" onchange="onMonthChange()">
+    </div>
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark theme">🌙</button>
+    <button class="btn btn-secondary" onclick="openModal('addTxnModal')">+ Transaction</button>
+    <button class="btn btn-secondary" onclick="openModal('resetModal')" style="border-color:rgba(255,71,87,0.4);color:var(--danger)">↺ Reset</button>
+    <button class="btn btn-primary" onclick="exportXLSX()">⬇ Export XLSX</button>
+  </div>
+</div>
+
+<!-- ── NAV TABS ── -->
+<div class="nav-tabs">
+  <div class="nav-tab active" onclick="switchTab('dashboard')">📊 Dashboard</div>
+  <div class="nav-tab" onclick="switchTab('ledger')">📒 Ledger <span class="tab-badge" id="ledgerBadge">0</span></div>
+  <div class="nav-tab" onclick="switchTab('debts')">💳 Debts <span class="tab-badge" id="debtsBadge">0</span></div>
+  <div class="nav-tab" onclick="switchTab('goals')">🎯 Goals</div>
+  <div class="nav-tab" onclick="switchTab('report')">📄 Report</div>
+</div>
+
+<!-- ── MAIN ── -->
+<div class="main">
+
+<!-- ════════════════════════════════════════════
+     TAB: DASHBOARD
+════════════════════════════════════════════ -->
+<div class="tab-panel active" id="tab-dashboard">
+  <div class="kpi-grid">
+    <div class="kpi-card green">
+      <div class="kpi-glow"></div>
+      <div class="kpi-label">💰 Recommended Prepayment</div>
+      <div class="kpi-value" id="kpi-prepay">₹0</div>
+      <div class="kpi-sub" id="kpi-prepay-month">—</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-glow"></div>
+      <div class="kpi-label">📈 Monthly Surplus</div>
+      <div class="kpi-value" id="kpi-surplus">₹0</div>
+      <div class="kpi-sub">Safe to invest / prepay</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-glow"></div>
+      <div class="kpi-label">🎯 Total Interest Saved</div>
+      <div class="kpi-value" id="kpi-interest">₹0</div>
+      <div class="kpi-sub">Cumulative via prepayments</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-glow"></div>
+      <div class="kpi-label">📅 Debt-Free In</div>
+      <div class="kpi-value" id="kpi-debtfree">—</div>
+      <div class="kpi-sub" id="kpi-debtfree-sub">months remaining</div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <!-- Snapshot -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">📋 This Month's Financial Snapshot</div>
+      </div>
+      <div class="panel-body" id="snapshotBody"></div>
+    </div>
+
+    <!-- Right column -->
+    <div style="display:flex; flex-direction:column; gap:16px;">
+      <!-- Safety Bar -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">🔒 Safety Bar™</div>
+          <div class="badge badge-flexible" id="safetyBadgeLabel">75%</div>
+        </div>
+        <div class="safety-control">
+          <div class="safety-label-row">
+            <div>
+              <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Spending Multiplier</div>
+              <div class="safety-pct" id="safetyPctDisplay">75%</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">Flex Spend Allowed</div>
+              <div class="mono bold" id="safetyFlexAmt" style="color:var(--accent4);">₹0</div>
+            </div>
+          </div>
+          <input type="range" class="safety-slider" id="safetySlider" min="0" max="100" value="75" oninput="onSafetyChange(this.value)">
+          <div class="safety-desc">
+            Flexible expenses are multiplied by this %. <b>Lower = more aggressive debt paydown.</b> Locked items are never touched.
+          </div>
+        </div>
+        <!-- Quick Kill -->
+        <div class="qk-card" id="quickKillCard">
+          <div class="qk-title">⚡ Quick Kill Alert</div>
+          <div class="qk-content" id="quickKillContent">No loans qualify yet.</div>
+        </div>
+      </div>
+
+      <!-- Top Avalanche Target -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">🏔 Avalanche Target</div>
+          <div class="avalanche-tag">⬆ Highest Rate</div>
+        </div>
+        <div class="panel-body" id="avalanchePanel">
+          <div class="empty-state"><div class="icon">💳</div><p>Add loans in the Debts tab</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TAB: LEDGER
+════════════════════════════════════════════ -->
+<div class="tab-panel" id="tab-ledger">
+  <div class="section-header">
+    <div class="section-title">Transaction Ledger</div>
+    <button class="btn btn-primary" onclick="openModal('addTxnModal')">+ Add Transaction</button>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr id="ledgerThead">
+          <th class="th-sort" onclick="setSort('date')" style="cursor:pointer;user-select:none">
+            Date <span id="sort-date" class="sort-icon">↓</span>
+          </th>
+          <th>Description</th>
+          <th>Category</th>
+          <th>Type</th>
+          <th>Locker</th>
+          <th>Essential</th>
+          <th class="right th-sort" onclick="setSort('amt')" style="cursor:pointer;user-select:none">
+            Amount (₹) <span id="sort-amt" class="sort-icon"></span>
+          </th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="ledgerBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TAB: DEBTS
+════════════════════════════════════════════ -->
+<div class="tab-panel" id="tab-debts">
+  <div class="section-header">
+    <div class="section-title">Debt Registry</div>
+    <button class="btn btn-primary" onclick="openModal('addDebtModal')">+ Add Loan</button>
+  </div>
+
+  <div id="debtCardsContainer"></div>
+
+  <!-- Prepayment history -->
+  <div class="section-header mt-16">
+    <div class="section-title">Prepayment History</div>
+    <button class="btn btn-secondary" onclick="openModal('addPrepayModal')">+ Log Prepayment</button>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Loan</th>
+          <th class="right">Amount (₹)</th>
+          <th>Notes</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="prepayBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TAB: GOALS
+════════════════════════════════════════════ -->
+<div class="tab-panel" id="tab-goals">
+  <div class="section-header">
+    <div class="section-title">Savings Goals</div>
+    <button class="btn btn-primary" onclick="openModal('addGoalModal')">+ Add Goal</button>
+  </div>
+  <div id="goalsContainer"></div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TAB: REPORT
+════════════════════════════════════════════ -->
+<div class="tab-panel" id="tab-report">
+  <div class="section-header">
+    <div class="section-title">Monthly Report</div>
+    <button class="btn btn-primary" onclick="exportXLSX()">⬇ Download XLSX</button>
+  </div>
+  <div id="reportContainer"></div>
+</div>
+
+</div><!-- /main -->
+
+<!-- ════════════════════════════════════════════
+     MODALS
+════════════════════════════════════════════ -->
+
+<!-- Add Transaction -->
+<div class="modal-overlay" id="addTxnModal">
+  <div class="modal">
+    <div class="modal-title">➕ Add Transaction</div>
+    <div class="form-grid form-grid-2">
+      <div class="field"><label>Date</label><input type="date" id="txnDate"></div>
+      <div class="field"><label>Category</label>
+        <select id="txnCat">
+          <option>Salary</option><option>Freelance</option><option>Rent</option>
+          <option>Groceries</option><option>Utilities</option><option>Transport</option>
+          <option>Entertainment</option><option>Health</option><option>Insurance</option>
+          <option>EMI</option><option>Dining Out</option><option>Shopping</option>
+          <option>Investment</option><option>Other Income</option><option>Other Expense</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="field"><label>Description</label><input type="text" id="txnDesc" placeholder="e.g. Salary - May"></div>
+    </div>
+    <div class="form-grid form-grid-2">
+      <div class="field"><label>Amount (₹)</label><input type="number" id="txnAmt" placeholder="0" min="0"></div>
+      <div class="field"><label>Type</label>
+        <select id="txnType" onchange="onTxnTypeChange()">
+          <option value="Income">Income</option>
+          <option value="Expense">Expense</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-grid form-grid-2" id="txnLockerRow">
+      <div class="field"><label>Locker</label>
+        <select id="txnLocker">
+          <option value="Locked">Locked 🔒</option>
+          <option value="Flexible">Flexible 🎚️</option>
+        </select>
+      </div>
+      <div class="field"><label>Essential</label>
+        <select id="txnEssential">
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('addTxnModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addTransaction()">Add Transaction</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Debt -->
+<div class="modal-overlay" id="addDebtModal">
+  <div class="modal">
+    <div class="modal-title">💳 Add Loan</div>
+    <div class="form-grid">
+      <div class="field"><label>Loan Name</label><input type="text" id="debtName" placeholder="e.g. Home Loan - SBI"></div>
+    </div>
+    <div class="form-grid form-grid-2">
+      <div class="field"><label>Principal (₹)</label><input type="number" id="debtPrincipal" placeholder="0"></div>
+      <div class="field"><label>Interest Rate (% p.a.)</label><input type="number" id="debtRate" placeholder="8.5" step="0.1"></div>
+    </div>
+    <div class="form-grid form-grid-2">
+      <div class="field"><label>Total Tenure (months)</label><input type="number" id="debtTenure" placeholder="240"></div>
+      <div class="field"><label>Months Elapsed</label><input type="number" id="debtElapsed" placeholder="0"></div>
+    </div>
+    <div class="form-grid">
+      <div class="field"><label>Current Outstanding Balance (₹)</label><input type="number" id="debtExtraPaid" placeholder="Leave blank to auto-calculate"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('addDebtModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addDebt()">Add Loan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Prepayment -->
+<div class="modal-overlay" id="addPrepayModal">
+  <div class="modal">
+    <div class="modal-title">💸 Log Prepayment</div>
+    <div class="form-grid form-grid-2">
+      <div class="field"><label>Date</label><input type="date" id="prepayDate"></div>
+      <div class="field"><label>Loan</label><select id="prepayLoan"></select></div>
+    </div>
+    <div class="form-grid form-grid-2">
+      <div class="field"><label>Amount (₹)</label><input type="number" id="prepayAmt" placeholder="0"></div>
+      <div class="field"><label>Notes</label><input type="text" id="prepayNotes" placeholder="Optional"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('addPrepayModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addPrepayment()">Log Prepayment</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Goal -->
+<div class="modal-overlay" id="addGoalModal">
+  <div class="modal">
+    <div class="modal-title">🎯 Add Savings Goal</div>
+    <div class="form-grid">
+      <div class="field"><label>Goal Name</label><input type="text" id="goalName" placeholder="e.g. Goa Trip"></div>
+    </div>
+    <div class="form-grid form-grid-2">
+      <div class="field"><label>Target Amount (₹)</label><input type="number" id="goalTarget" placeholder="50000"></div>
+      <div class="field"><label>Monthly Set-Aside (₹)</label><input type="number" id="goalMonthly" placeholder="5000"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('addGoalModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addGoal()">Add Goal</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Edit Transaction -->
+<div class="modal-overlay" id="editTxnModal">
+  <div class="modal">
+    <div class="modal-title">✏️ Edit Transaction</div>
+    <div class="form-grid form-grid-2">
+      <div class="field"><label>Date</label><input type="date" id="eTxnDate"></div>
+      <div class="field"><label>Category</label>
+        <select id="eTxnCat">
+          <option>Salary</option><option>Freelance</option><option>Rent</option>
+          <option>Groceries</option><option>Utilities</option><option>Transport</option>
+          <option>Entertainment</option><option>Health</option><option>Insurance</option>
+          <option>EMI</option><option>Dining Out</option><option>Shopping</option>
+          <option>Investment</option><option>Other Income</option><option>Other Expense</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="field"><label>Description</label><input type="text" id="eTxnDesc"></div>
+    </div>
+    <div class="form-grid form-grid-2">
+      <div class="field"><label>Amount (₹)</label><input type="number" id="eTxnAmt" min="0"></div>
+      <div class="field"><label>Type</label>
+        <select id="eTxnType" onchange="document.getElementById('eTxnLockerRow').style.display=this.value==='Expense'?'grid':'none'">
+          <option value="Income">Income</option><option value="Expense">Expense</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-grid form-grid-2" id="eTxnLockerRow">
+      <div class="field"><label>Locker</label>
+        <select id="eTxnLocker">
+          <option value="Locked">Locked 🔒</option><option value="Flexible">Flexible 🎚️</option>
+        </select>
+      </div>
+      <div class="field"><label>Essential</label>
+        <select id="eTxnEssential"><option value="Yes">Yes</option><option value="No">No</option></select>
+      </div>
+    </div>
+    <input type="hidden" id="eTxnId">
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('editTxnModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditTxn()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Debt -->
+<div class="modal-overlay" id="editDebtModal">
+  <div class="modal">
+    <div class="modal-title">✏️ Edit Loan</div>
+    <div class="form-grid">
+      <div class="field"><label>Loan Name</label><input type="text" id="eDebtName"></div>
+    </div>
+    <div class="form-grid form-grid-2">
+      <div class="field"><label>Principal (₹)</label><input type="number" id="eDebtPrincipal"></div>
+      <div class="field"><label>Interest Rate (% p.a.)</label><input type="number" id="eDebtRate" step="0.1"></div>
+    </div>
+    <div class="form-grid form-grid-2">
+      <div class="field"><label>Total Tenure (months)</label><input type="number" id="eDebtTenure"></div>
+      <div class="field"><label>Months Elapsed</label><input type="number" id="eDebtElapsed"></div>
+    </div>
+    <div class="form-grid">
+      <div class="field"><label>Current Balance (₹)</label><input type="number" id="eDebtBalance" placeholder="Enter outstanding balance"></div>
+    </div>
+    <input type="hidden" id="eDebtId">
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('editDebtModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditDebt()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Goal -->
+<div class="modal-overlay" id="editGoalModal">
+  <div class="modal">
+    <div class="modal-title">✏️ Edit Goal</div>
+    <div class="form-grid">
+      <div class="field"><label>Goal Name</label><input type="text" id="eGoalName"></div>
+    </div>
+    <div class="form-grid form-grid-2">
+      <div class="field"><label>Target Amount (₹)</label><input type="number" id="eGoalTarget"></div>
+      <div class="field"><label>Monthly Set-Aside (₹)</label><input type="number" id="eGoalMonthly"></div>
+    </div>
+    <input type="hidden" id="eGoalId">
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('editGoalModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditGoal()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Prepayment -->
+<div class="modal-overlay" id="editPrepayModal">
+  <div class="modal">
+    <div class="modal-title">✏️ Edit Prepayment</div>
+    <div class="form-grid form-grid-2">
+      <div class="field"><label>Date</label><input type="date" id="ePrepayDate"></div>
+      <div class="field"><label>Loan</label><select id="ePrepayLoan"></select></div>
+    </div>
+    <div class="form-grid form-grid-2">
+      <div class="field"><label>Amount (₹)</label><input type="number" id="ePrepayAmt"></div>
+      <div class="field"><label>Notes</label><input type="text" id="ePrepayNotes" placeholder="Optional"></div>
+    </div>
+    <input type="hidden" id="ePrepayId">
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('editPrepayModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditPrepay()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reset Confirmation -->
+<div class="modal-overlay" id="resetModal">
+  <div class="modal" style="max-width:420px;text-align:center">
+    <div style="font-size:40px;margin-bottom:12px">↺</div>
+    <div class="modal-title" style="justify-content:center;font-size:17px">Reset to Example Data?</div>
+    <p style="color:var(--text2);font-size:13px;line-height:1.6;margin-bottom:8px">
+      This will clear <b style="color:var(--text)">all your transactions, loans, and goals</b>
+      and restore the built-in example values.
+    </p>
+    <p style="color:var(--text3);font-size:12px;margin-bottom:20px">
+      This cannot be undone. Export your data first if you want to keep it.
+    </p>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button class="btn btn-secondary" onclick="closeModal('resetModal')" style="min-width:120px">Cancel</button>
+      <button class="btn btn-danger" onclick="resetAll()" style="min-width:140px">↺ Yes, Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <span class="toast-icon">✓</span>
+  <span id="toastMsg">Saved!</span>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// DATA STORE
+// ═══════════════════════════════════════════
+function defaultState() {
+  const now = new Date();
+  const yr  = now.getFullYear();
+  const mo  = String(now.getMonth() + 1).padStart(2, '0');
+  return {
+    safetyBar:    0.75,
+    reportMonth:  yr + '-' + mo,
+    transactions: [],
+    debts:        [],
+    prepayments:  [],
+    goals:        [],
+    nextId:       1,
+    sort:         { field: 'date', dir: -1 },
+  };
+}
+let state = defaultState();
+
+
+// ═══════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════
+const fmt = n => '₹' + Math.round(n).toLocaleString('en-IN');
+const fmtK = n => n >= 100000 ? '₹' + (n/100000).toFixed(1) + 'L' : n >= 1000 ? '₹' + (n/1000).toFixed(0) + 'K' : fmt(n);
+
+function pmt(rate, nper, pv) {
+  if (rate === 0) return pv / nper;
+  return (rate * pv * Math.pow(1+rate, nper)) / (Math.pow(1+rate, nper) - 1);
+}
+
+function pvCalc(rate, nper, pmt_val) {
+  if (rate === 0) return pmt_val * nper;
+  return pmt_val * (1 - Math.pow(1+rate, -nper)) / rate;
+}
+
+// Parse YYYY-MM as {year, month}
+function parseMonthStr(s) {
+  const [y, m] = s.split('-').map(Number);
+  return { year: y, month: m };
+}
+
+// Determine which budget month a transaction belongs to
+// Income: salary credited in month M → belongs to budget month M+1 (Indian payroll)
+// Expense: belongs to the month of the date
+function budgetMonth(txn) {
+  const d = new Date(txn.date);
+  const year = d.getFullYear();
+  const month = d.getMonth() + 1; // 1-based
+  if (txn.type === 'Income') {
+    // shift +1
+    return month === 12 ? { year: year+1, month: 1 } : { year, month: month+1 };
+  }
+  return { year, month };
+}
+
+function txnsForMonth(yearMonth) {
+  const { year, month } = parseMonthStr(yearMonth);
+  return state.transactions.filter(t => {
+    const bm = budgetMonth(t);
+    return bm.year === year && bm.month === month;
+  });
+}
+
+// ═══════════════════════════════════════════
+// ENGINE CALCULATIONS
+// ═══════════════════════════════════════════
+function calcEngine() {
+  const txns = txnsForMonth(state.reportMonth);
+
+  const totalIncome = txns.filter(t=>t.type==='Income').reduce((s,t)=>s+t.amt,0);
+  const fixedExp    = txns.filter(t=>t.type==='Expense'&&t.locker==='Locked'  &&t.essential==='Yes').reduce((s,t)=>s+t.amt,0);
+  const lockedDisc  = txns.filter(t=>t.type==='Expense'&&t.locker==='Locked'  &&t.essential==='No' ).reduce((s,t)=>s+t.amt,0);
+  const flexRaw     = txns.filter(t=>t.type==='Expense'&&t.locker==='Flexible'               ).reduce((s,t)=>s+t.amt,0);
+  const flexAdj     = flexRaw * state.safetyBar;
+  const sinking     = state.goals.reduce((s,g)=>s + (g.monthly||0), 0);
+  const surplus     = totalIncome - fixedExp - lockedDisc - flexAdj - sinking;
+  const prepay      = Math.max(surplus, 0);
+
+  // Debt calculations
+  const debtCalcs = state.debts.map(d => {
+    const r = d.rate / 100 / 12;
+    const remaining = d.tenure - d.elapsed;
+    const emi = (d.manualEmi !== undefined && d.manualEmi > 0) ? d.manualEmi : pmt(r, d.tenure, d.principal);
+    const balance = (d.manualBalance !== undefined && d.manualBalance !== null) ? d.manualBalance : Math.max(pvCalc(r, remaining, emi) - d.extraPaid, 0);
+    const interestSaved = d.extraPaid * r * remaining;
+    const pctPaid = d.principal > 0 ? Math.min(((1 - balance / d.principal) * 100), 100) : 0;
+    return { ...d, emi, balance: Math.max(balance,0), interestSaved, remaining, pctPaid, r };
+  });
+
+  const totalInterestSaved = debtCalcs.reduce((s,d)=>s+d.interestSaved,0)
+    + state.prepayments.reduce((s,p)=>s+p.amt,0) * 0.072/12; // rough estimate for logged prepayments
+
+  const maxRemaining = debtCalcs.length ? Math.max(...debtCalcs.map(d=>d.remaining)) : 0;
+
+  // Avalanche: highest interest rate first
+  const sorted = [...debtCalcs].sort((a,b)=>b.rate-a.rate);
+
+  // Quick kill: balance < surplus*2
+  const quickKills = debtCalcs.filter(d => d.balance > 0 && d.balance < prepay * 2);
+
+  return { totalIncome, fixedExp, lockedDisc, flexRaw, flexAdj, sinking, surplus, prepay,
+           debtCalcs, sorted, totalInterestSaved, maxRemaining, quickKills };
+}
+
+// ═══════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════
+function renderAll() {
+  const e = calcEngine();
+  renderKPIs(e);
+  renderSnapshot(e);
+  renderSafetyBar(e);
+  renderAvalanche(e);
+  renderQuickKill(e);
+  renderLedger();
+  renderDebts(e);
+  renderGoals();
+  renderReport(e);
+  updateBadges();
+  saveState();
+}
+
+function renderKPIs(e) {
+  const { year, month } = parseMonthStr(state.reportMonth);
+  const monthName = new Date(year, month-1, 1).toLocaleString('en-IN',{month:'long',year:'numeric'});
+
+  document.getElementById('kpi-prepay').textContent = fmt(e.prepay);
+  document.getElementById('kpi-prepay-month').textContent = monthName;
+  document.getElementById('kpi-surplus').textContent = fmt(e.surplus);
+  document.getElementById('kpi-interest').textContent = fmt(e.totalInterestSaved);
+  const mo = e.maxRemaining;
+  document.getElementById('kpi-debtfree').textContent = mo ? mo + ' months' : '—';
+  if (mo) {
+    const yrs = Math.floor(mo / 12);
+    const rem = mo % 12;
+    const yrsStr = yrs > 0 ? yrs + 'y' : '';
+    const remStr = rem > 0 ? rem + 'm' : '';
+    document.getElementById('kpi-debtfree-sub').textContent = '≈ ' + [yrsStr, remStr].filter(Boolean).join(' ') + ' remaining';
+  } else {
+    document.getElementById('kpi-debtfree-sub').textContent = 'No active loans';
+  }
+}
+
+function renderSnapshot(e) {
+  const rows = [
+    { label:'Total Income',          dot:'#00E5A0', amt: e.totalIncome, color:'var(--accent)' },
+    { label:'Fixed Expenses',        dot:'#0099FF', amt:-e.fixedExp,    color:'var(--accent2)' },
+    { label:'Locked Discretionary',  dot:'#5B6BFF', amt:-e.lockedDisc,  color:'#5B6BFF' },
+    { label:`Flexible × ${Math.round(state.safetyBar*100)}%`, dot:'#FFD166', amt:-e.flexAdj, color:'var(--accent4)' },
+    { label:'Sinking Fund (Goals)',   dot:'#FF6B35', amt:-e.sinking,     color:'var(--accent3)' },
+  ];
+  const total = e.surplus;
+  const maxAmt = Math.max(...rows.map(r=>Math.abs(r.amt)), 1);
+
+  let html = rows.map(r => `
+    <div class="snapshot-row">
+      <div class="snapshot-label">
+        <div class="snapshot-dot" style="background:${r.dot}"></div>
+        ${r.label}
+      </div>
+      <div class="snapshot-right">
+        <div class="snapshot-bar-wrap">
+          <div class="snapshot-bar" style="width:${Math.min(Math.abs(r.amt)/maxAmt*100,100)}%;background:${r.dot}"></div>
+        </div>
+        <div class="snapshot-pct">${e.totalIncome>0?(Math.abs(r.amt)/e.totalIncome*100).toFixed(0)+'%':'-'}</div>
+        <div class="snapshot-amt" style="color:${r.color}">${r.amt>=0?fmt(r.amt):'-'+fmt(-r.amt)}</div>
+      </div>
+    </div>
+  `).join('');
+
+  html += `
+    <div class="snapshot-row total">
+      <div class="snapshot-label" style="color:var(--text);font-weight:700;">
+        <div class="snapshot-dot" style="background:${total>=0?'var(--accent)':'var(--danger)'}"></div>
+        NET SURPLUS → PREPAY
+      </div>
+      <div class="snapshot-right">
+        <div class="snapshot-bar-wrap">
+          <div class="snapshot-bar" style="width:${Math.min(Math.abs(total)/maxAmt*100,100)}%;background:${total>=0?'var(--accent)':'var(--danger)'}"></div>
+        </div>
+        <div class="snapshot-pct">${e.totalIncome>0?(Math.abs(total)/e.totalIncome*100).toFixed(0)+'%':'-'}</div>
+        <div class="snapshot-amt mono bold" style="color:${total>=0?'var(--accent)':'var(--danger)'}">${total>=0?fmt(total):'-'+fmt(-total)}</div>
+      </div>
+    </div>
+  `;
+  document.getElementById('snapshotBody').innerHTML = html;
+}
+
+function renderSafetyBar(e) {
+  const pct = Math.round(state.safetyBar * 100);
+  document.getElementById('safetyPctDisplay').textContent = pct + '%';
+  document.getElementById('safetyBadgeLabel').textContent = pct + '%';
+  document.getElementById('safetySlider').value = pct;
+  document.getElementById('safetyFlexAmt').textContent = fmt(e.flexAdj);
+}
+
+function renderAvalanche(e) {
+  const top = e.sorted[0];
+  if (!top) {
+    document.getElementById('avalanchePanel').innerHTML = '<div class="empty-state"><div class="icon">💳</div><p>Add loans in the Debts tab</p></div>';
+    return;
+  }
+  document.getElementById('avalanchePanel').innerHTML = `
+    <div style="margin-bottom:10px">
+      <div style="font-size:16px;font-weight:700;margin-bottom:4px">${top.name}</div>
+      <div class="mono" style="color:var(--text3);font-size:12px">${top.rate}% p.a. — highest rate loan</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div>
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:3px">Balance</div>
+        <div class="mono bold" style="color:var(--danger)">${fmt(top.balance)}</div>
+      </div>
+      <div>
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:3px">Monthly EMI</div>
+        <div class="mono bold" style="color:var(--text)">${fmt(top.emi)}</div>
+      </div>
+    </div>
+    <div style="margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:6px">
+        <span>Progress</span><span class="mono">${top.pctPaid.toFixed(0)}% paid</span>
+      </div>
+      <div class="progress-wrap"><div class="progress-bar" style="width:${top.pctPaid}%"></div></div>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:8px">
+      Throw <b style="color:var(--accent)">${fmt(e.prepay)}</b> extra here every month to kill it fastest.
+    </div>
+  `;
+}
+
+function renderQuickKill(e) {
+  if (e.quickKills.length === 0) {
+    document.getElementById('quickKillContent').innerHTML = '<span style="color:var(--text3)">No loans qualify yet. Keep prepaying!</span>';
+    document.getElementById('quickKillCard').style.display = 'block';
+    return;
+  }
+  const names = e.quickKills.map(d=>`<b>${d.name}</b> (${fmt(d.balance)})`).join(', ');
+  document.getElementById('quickKillContent').innerHTML = `🔥 Close now: ${names} — balance under 2× your monthly surplus!`;
+}
+
+function renderLedger() {
+  const { field, dir } = state.sort;
+  const txns = [...state.transactions].sort((a,b) => {
+    if (field === 'date') return dir * a.date.localeCompare(b.date);
+    if (field === 'amt')  return dir * (a.amt - b.amt);
+    return 0;
+  });
+  if (!txns.length) {
+    document.getElementById('ledgerBody').innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="icon">📒</div><p>No transactions yet.</p></div></td></tr>`;
+    return;
+  }
+  const cats = "Salary,Freelance,Rent,Groceries,Utilities,Transport,Entertainment,Health,Insurance,EMI,Dining Out,Shopping,Investment,Other Income,Other Expense".split(',');
+  document.getElementById('ledgerBody').innerHTML = txns.map(t => {
+    const bm = budgetMonth(t);
+    const bmStr = new Date(bm.year,bm.month-1,1).toLocaleString('en-IN',{month:'short',year:'numeric'});
+    const catOpts = cats.map(c=>`<option value="${c}"${c===t.cat?' selected':''}>${c}</option>`).join('');
+    const amtColor = t.type==='Income' ? 'var(--income)' : 'var(--expense)';
+    return `
+    <tr data-id="${t.id}">
+      <td>
+        <input type="date" value="${t.date}" style="color:var(--text2)"
+          onchange="patchTxn(${t.id},'date',this.value);this.closest('tr').classList.add('field-changed');setTimeout(()=>this.closest('tr').classList.remove('field-changed'),500)">
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">→ ${bmStr}</div>
+      </td>
+      <td>
+        <input type="text" value="${t.desc}" style="color:var(--text);font-weight:600"
+          onblur="patchTxn(${t.id},'desc',this.value)" onkeydown="if(event.key==='Enter')this.blur()">
+      </td>
+      <td>
+        <select class="ie-select" onchange="patchTxn(${t.id},'cat',this.value)">${catOpts}</select>
+      </td>
+      <td>
+        <select class="ie-select" onchange="patchTxn(${t.id},'type',this.value);renderAll()">
+          <option value="Income"${t.type==='Income'?' selected':''}>▲ Income</option>
+          <option value="Expense"${t.type==='Expense'?' selected':''}>▼ Expense</option>
+        </select>
+      </td>
+      <td>
+        <select class="ie-select" onchange="patchTxn(${t.id},'locker',this.value)">
+          <option value="Locked"${t.locker==='Locked'?' selected':''}>🔒 Locked</option>
+          <option value="Flexible"${t.locker==='Flexible'?' selected':''}>🎚️ Flexible</option>
+        </select>
+      </td>
+      <td>
+        <select class="ie-select" onchange="patchTxn(${t.id},'essential',this.value)">
+          <option value="Yes"${t.essential==='Yes'?' selected':''}>Yes</option>
+          <option value="No"${t.essential==='No'?' selected':''}>No</option>
+        </select>
+      </td>
+      <td class="right">
+        <input type="number" value="${t.amt}" min="0" style="color:${amtColor};font-weight:700;font-family:var(--mono);text-align:right"
+          onblur="patchTxn(${t.id},'amt',parseFloat(this.value)||0)" onkeydown="if(event.key==='Enter')this.blur()">
+      </td>
+      <td>
+        <div class="inline-actions">
+          <div class="icon-btn del" onclick="deleteTxn(${t.id})" title="Delete">🗑</div>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderDebts(e) {
+  const priorityClass = ['priority-1','priority-2','priority-3','priority-4'];
+  const priorityLabel = ['#1 — Attack First','#2 — Attack Next','#3 — Then This','#4 — Minimum Only'];
+
+  if (!e.sorted.length) {
+    document.getElementById('debtCardsContainer').innerHTML = '<div class="empty-state"><div class="icon">💳</div><p>No loans added yet.</p></div>';
+    return;
+  }
+
+  document.getElementById('debtCardsContainer').innerHTML = e.sorted.map((d,i) => `
+    <div class="debt-card">
+      <div class="debt-card-header">
+        <div style="flex:1;margin-right:12px">
+          <input type="text" value="${d.name}"
+            style="background:transparent;border:none;border-bottom:1px dashed var(--border2);color:var(--text);font-family:var(--sans);font-size:15px;font-weight:700;outline:none;width:100%;padding:2px 4px;margin-bottom:4px;transition:border-color .15s,background .15s"
+            onfocus="this.style.borderBottomColor='var(--accent2)';this.style.background='rgba(0,153,255,0.06)'"
+            onblur="this.style.borderBottomColor='var(--border2)';this.style.background='transparent';patchDebt(${d.id},'name',this.value)"
+            onkeydown="if(event.key==='Enter')this.blur()">
+          <div class="debt-card-sub">
+            <input type="number" value="${d.rate}" min="0" max="100" step="0.1"
+              style="background:transparent;border:none;border-bottom:1px dashed var(--border2);color:var(--text3);font-family:var(--mono);font-size:12px;outline:none;width:44px;padding:1px 2px;transition:border-color .15s"
+              onfocus="this.style.borderBottomColor='var(--accent2)'"
+              onblur="this.style.borderBottomColor='var(--border2)';patchDebt(${d.id},'rate',parseFloat(this.value)||0);renderAll()"
+              onkeydown="if(event.key==='Enter')this.blur()">
+            % p.a. ·
+            <input type="number" value="${d.remaining}" min="0"
+              style="background:transparent;border:none;border-bottom:1px dashed var(--border2);color:var(--text3);font-family:var(--mono);font-size:12px;outline:none;width:36px;padding:1px 2px;transition:border-color .15s"
+              onfocus="this.style.borderBottomColor='var(--accent2)'"
+              onblur="this.style.borderBottomColor='var(--border2)';patchDebt(${d.id},'tenure',d.elapsed+parseInt(this.value||0));renderAll()"
+              onkeydown="if(event.key==='Enter')this.blur()">
+            months left
+          </div>
+        </div>
+        <div class="debt-priority ${priorityClass[i] || 'priority-4'}">${priorityLabel[i] || '#'+(i+1)}</div>
+      </div>
+      <div class="debt-stats">
+        <div>
+          <div class="debt-stat-label">Balance ✏</div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <span style="color:var(--text3);font-family:var(--mono);font-size:12px">₹</span>
+            <input type="number" value="${Math.round(d.balance)}" min="0"
+              class="balance-input"
+              onblur="updateBalance(${d.id},this.value)"
+              onclick="this.select()"
+              onkeydown="if(event.key==='Enter')this.blur()">
+          </div>
+        </div>
+        <div>
+          <div class="debt-stat-label">Monthly EMI ✏</div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <span style="color:var(--text3);font-family:var(--mono);font-size:12px">₹</span>
+            <input type="number" value="${Math.round(d.emi)}" min="0"
+              style="background:transparent;border:none;border-bottom:1px dashed var(--border2);color:var(--text);font-family:var(--mono);font-size:14px;font-weight:700;outline:none;width:90px;padding:2px 0;transition:border-color .15s"
+              onblur="patchDebt(${d.id},'manualEmi',parseFloat(this.value)||0);renderAll()"
+              onclick="this.select()"
+              onkeydown="if(event.key==='Enter')this.blur()">
+          </div>
+        </div>
+        <div>
+          <div class="debt-stat-label">Principal ✏</div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <span style="color:var(--text3);font-family:var(--mono);font-size:12px">₹</span>
+            <input type="number" value="${d.principal}" min="0"
+              style="background:transparent;border:none;border-bottom:1px dashed var(--border2);color:var(--text2);font-family:var(--mono);font-size:14px;font-weight:700;outline:none;width:90px;padding:2px 0;transition:border-color .15s"
+              onblur="patchDebt(${d.id},'principal',parseFloat(this.value)||0);renderAll()"
+              onclick="this.select()"
+              onkeydown="if(event.key==='Enter')this.blur()">
+          </div>
+        </div>
+        <div>
+          <div class="debt-stat-label">Elapsed (months) ✏</div>
+          <input type="number" value="${d.elapsed}" min="0"
+            style="background:transparent;border:none;border-bottom:1px dashed var(--border2);color:var(--text2);font-family:var(--mono);font-size:14px;font-weight:700;outline:none;width:60px;padding:2px 0;transition:border-color .15s"
+            onblur="patchDebt(${d.id},'elapsed',parseInt(this.value)||0);renderAll()"
+            onclick="this.select()"
+            onkeydown="if(event.key==='Enter')this.blur()">
+        </div>
+      </div>
+      <div style="margin-bottom:6px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:6px">
+          <span>Loan Progress</span>
+          <span class="mono">${d.pctPaid.toFixed(1)}% paid (${d.elapsed}/${d.tenure} months)</span>
+        </div>
+        <div class="progress-wrap"><div class="progress-bar" style="width:${d.pctPaid}%"></div></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px">
+        <button class="btn btn-danger" style="padding:6px 12px;font-size:12px" onclick="deleteDebt(${d.id})">🗑 Delete</button>
+      </div>
+    </div>
+  `).join('');
+
+  // Prepay table
+  const prepays = [...state.prepayments].sort((a,b)=>b.date.localeCompare(a.date));
+  if (!prepays.length) {
+    document.getElementById('prepayBody').innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="icon">💸</div><p>No prepayments logged yet.</p></div></td></tr>`;
+    return;
+  }
+  let running = 0;
+  const rows = [...prepays].reverse().map(p => { running += p.amt; return {...p, running}; }).reverse();
+  document.getElementById('prepayBody').innerHTML = rows.map(p=>`
+    <tr>
+      <td class="mono" style="color:var(--text3)">${p.date}</td>
+      <td>${p.loan}</td>
+      <td class="mono right text-accent bold">+${fmt(p.amt)}</td>
+      <td style="color:var(--text3)">${p.notes||'—'}</td>
+      <td><div class="inline-actions">
+        <div class="icon-btn edit" onclick="editPrepay(${p.id})" title="Edit">✏️</div>
+        <div class="icon-btn del" onclick="deletePrepay(${p.id})" title="Delete">🗑</div>
+      </div></td>
+    </tr>`).join('');
+}
+
+function renderGoals() {
+  if (!state.goals.length) {
+    document.getElementById('goalsContainer').innerHTML = '<div class="empty-state"><div class="icon">🎯</div><p>No goals yet. Add one!</p></div>';
+    return;
+  }
+  document.getElementById('goalsContainer').innerHTML = state.goals.map(g => {
+    const months = g.target > 0 && g.monthly > 0 ? Math.ceil(g.target / g.monthly) : 0;
+    const pct = Math.min(g.monthly / g.target * 100, 100) || 0;
+    return `
+    <div class="goal-card" data-id="${g.id}">
+      <div class="goal-header">
+        <input type="text" value="${g.name}"
+          style="background:transparent;border:none;border-bottom:1px dashed var(--border2);color:var(--text);font-family:var(--sans);font-size:15px;font-weight:700;outline:none;width:60%;padding:2px 4px;transition:border-color .15s,background .15s"
+          onfocus="this.style.borderBottomColor='var(--accent2)';this.style.background='rgba(0,153,255,0.06)'"
+          onblur="this.style.borderBottomColor='var(--border2)';this.style.background='transparent';patchGoal(${g.id},'name',this.value)"
+          onkeydown="if(event.key==='Enter')this.blur()">
+        <div class="goal-pct">${pct.toFixed(0)}% funded / month</div>
+      </div>
+      <div class="goal-bar-wrap"><div class="goal-bar" style="width:${pct}%"></div></div>
+      <div class="goal-stats">
+        <span>Target: <b>₹</b>
+          <input type="number" value="${g.target}" min="0"
+            style="background:transparent;border:none;border-bottom:1px dashed var(--border2);color:var(--text2);font-family:var(--mono);font-size:12px;outline:none;width:80px;padding:1px 2px;transition:border-color .15s"
+            onfocus="this.style.borderBottomColor='var(--accent2)'"
+            onblur="this.style.borderBottomColor='var(--border2)';patchGoal(${g.id},'target',parseFloat(this.value)||0);renderGoals()"
+            onkeydown="if(event.key==='Enter')this.blur()">
+        </span>
+        <span>Monthly: <b>₹</b>
+          <input type="number" value="${g.monthly}" min="0"
+            style="background:transparent;border:none;border-bottom:1px dashed var(--border2);color:var(--accent);font-family:var(--mono);font-size:12px;outline:none;width:80px;padding:1px 2px;transition:border-color .15s"
+            onfocus="this.style.borderBottomColor='var(--accent2)'"
+            onblur="this.style.borderBottomColor='var(--border2)';patchGoal(${g.id},'monthly',parseFloat(this.value)||0);renderGoals()"
+            onkeydown="if(event.key==='Enter')this.blur()">
+        </span>
+        <span style="color:var(--text3)">Goal in: <b style="color:var(--text2)">${months ? months + ' months' : '—'}</b></span>
+        <span>
+          <button class="icon-btn del" onclick="deleteGoal(${g.id})" style="width:auto;padding:2px 8px;font-size:11px">🗑 Delete</button>
+        </span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderReport(e) {
+  const { year, month } = parseMonthStr(state.reportMonth);
+  const monthName = new Date(year, month-1, 1).toLocaleString('en-IN',{month:'long',year:'numeric'});
+  const txns = txnsForMonth(state.reportMonth);
+
+  let html = `
+  <div class="report-section">
+    <div class="report-section-title">📊 Summary — ${monthName}</div>
+    <table class="data-table">
+      <tbody>
+        <tr><td style="color:var(--text2)">Total Income</td><td class="mono right bold text-accent">${fmt(e.totalIncome)}</td></tr>
+        <tr><td style="color:var(--text2)">Fixed Expenses (Locked + Essential)</td><td class="mono right bold" style="color:var(--accent2)">-${fmt(e.fixedExp)}</td></tr>
+        <tr><td style="color:var(--text2)">Locked Discretionary</td><td class="mono right bold" style="color:#5B6BFF">-${fmt(e.lockedDisc)}</td></tr>
+        <tr><td style="color:var(--text2)">Flexible Spend (×${Math.round(state.safetyBar*100)}% Safety Bar)</td><td class="mono right bold text-yellow">-${fmt(e.flexAdj)}</td></tr>
+        <tr><td style="color:var(--text2)">Sinking Fund (Goals)</td><td class="mono right bold text-orange">-${fmt(e.sinking)}</td></tr>
+        <tr style="border-top:2px solid var(--border2)"><td style="color:var(--text);font-weight:700">Net Surplus → Prepayment</td><td class="mono right bold" style="color:${e.surplus>=0?'var(--accent)':'var(--danger)'};font-size:16px">${fmt(e.surplus)}</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="report-section">
+    <div class="report-section-title">📒 Transactions — ${monthName}</div>
+    <table class="data-table">
+      <thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Type</th><th>Locker</th><th class="right">Amount (₹)</th></tr></thead>
+      <tbody>
+        ${txns.length ? txns.sort((a,b)=>a.date.localeCompare(b.date)).map(t=>`
+          <tr>
+            <td class="mono" style="color:var(--text3)">${t.date}</td>
+            <td>${t.desc}</td>
+            <td><span class="cat-chip">${t.cat}</span></td>
+            <td><span class="badge badge-${t.type.toLowerCase()}">${t.type}</span></td>
+            <td><span class="badge badge-${t.locker.toLowerCase()}">${t.locker}</span></td>
+            <td class="mono right" style="color:${t.type==='Income'?'var(--income)':'var(--expense)'}">
+              ${t.type==='Income'?'+':'-'}${fmt(t.amt)}
+            </td>
+          </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">No transactions for this month</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="report-section">
+    <div class="report-section-title">💳 Debt Status</div>
+    <table class="data-table">
+      <thead><tr><th>Loan</th><th>Rate</th><th>Balance</th><th>EMI</th><th>Progress</th><th>Priority</th></tr></thead>
+      <tbody>
+        ${e.sorted.map((d,i)=>`
+          <tr>
+            <td style="font-weight:700">${d.name}</td>
+            <td class="mono">${d.rate}%</td>
+            <td class="mono text-danger">${fmt(d.balance)}</td>
+            <td class="mono">${fmt(d.emi)}</td>
+            <td style="width:120px">
+              <div class="progress-wrap"><div class="progress-bar" style="width:${d.pctPaid}%"></div></div>
+              <div style="font-size:10px;color:var(--text3);margin-top:3px">${d.pctPaid.toFixed(0)}% paid</div>
+            </td>
+            <td><span class="badge ${['badge-expense','badge-flexible','badge-yes','badge-locked'][i]||'badge-locked'}">#${i+1} Avalanche</span></td>
+          </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="report-section">
+    <div class="report-section-title">🎯 Goals Status</div>
+    <table class="data-table">
+      <thead><tr><th>Goal</th><th>Target</th><th>Monthly Set-Aside</th><th>Months to Goal</th></tr></thead>
+      <tbody>
+        ${state.goals.map(g=>`
+          <tr>
+            <td style="font-weight:700">${g.name}</td>
+            <td class="mono">${fmt(g.target)}</td>
+            <td class="mono text-accent">${fmt(g.monthly)}</td>
+            <td class="mono">${g.monthly>0?Math.ceil(g.target/g.monthly)+' months':'—'}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>
+  `;
+  document.getElementById('reportContainer').innerHTML = html;
+}
+
+function updateBadges() {
+  document.getElementById('ledgerBadge').textContent = state.transactions.length;
+  document.getElementById('debtsBadge').textContent = state.debts.length;
+}
+
+// ═══════════════════════════════════════════
+// ACTIONS
+// ═══════════════════════════════════════════
+function onMonthChange() {
+  state.reportMonth = document.getElementById('reportMonth').value;
+  renderAll();
+}
+
+function onSafetyChange(v) {
+  state.safetyBar = v / 100;
+  renderAll();
+}
+
+function onTxnTypeChange() {
+  const type = document.getElementById('txnType').value;
+  document.getElementById('txnLockerRow').style.display = type === 'Expense' ? 'grid' : 'none';
+}
+
+function addTransaction() {
+  const date = document.getElementById('txnDate').value;
+  const desc = document.getElementById('txnDesc').value.trim();
+  const cat  = document.getElementById('txnCat').value;
+  const amt  = parseFloat(document.getElementById('txnAmt').value);
+  const type = document.getElementById('txnType').value;
+  const locker   = type==='Income' ? 'Locked'  : document.getElementById('txnLocker').value;
+  const essential= type==='Income' ? 'Yes'     : document.getElementById('txnEssential').value;
+
+  if (!date || !desc || !amt || amt <= 0) { toast('Please fill all fields', false); return; }
+
+  state.transactions.push({ id: state.nextId++, date, desc, cat, amt, type, locker, essential });
+  closeModal('addTxnModal');
+  renderAll();
+  toast('Transaction added!');
+}
+
+function deleteTxn(id) {
+  state.transactions = state.transactions.filter(t=>t.id!==id);
+  renderAll();
+  toast('Transaction removed');
+}
+
+function addDebt() {
+  const name     = document.getElementById('debtName').value.trim();
+  const principal= parseFloat(document.getElementById('debtPrincipal').value);
+  const rate     = parseFloat(document.getElementById('debtRate').value);
+  const tenure   = parseInt(document.getElementById('debtTenure').value);
+  const elapsed  = parseInt(document.getElementById('debtElapsed').value) || 0;
+  const extraPaid= parseFloat(document.getElementById('debtExtraPaid').value) || 0;
+
+  if (!name || !principal || !rate || !tenure) { toast('Please fill all fields', false); return; }
+
+  const manualBal = parseFloat(document.getElementById('debtExtraPaid').value);
+  state.debts.push({ id: state.nextId++, name, principal, rate, tenure, elapsed, extraPaid: 0, manualBalance: isNaN(manualBal) ? principal : manualBal });
+  closeModal('addDebtModal');
+  renderAll();
+  toast('Loan added!');
+}
+
+function deleteDebt(id) {
+  state.debts = state.debts.filter(d=>d.id!==id);
+  renderAll();
+  toast('Loan removed');
+}
+
+function addPrepayment() {
+  const date  = document.getElementById('prepayDate').value;
+  const loan  = document.getElementById('prepayLoan').value;
+  const amt   = parseFloat(document.getElementById('prepayAmt').value);
+  const notes = document.getElementById('prepayNotes').value.trim();
+  if (!date || !loan || !amt) { toast('Please fill required fields', false); return; }
+  state.prepayments.push({ id: state.nextId++, date, loan, amt, notes });
+  // Also update the debt's extraPaid
+  const debt = state.debts.find(d=>d.name===loan);
+  if (debt) debt.extraPaid += amt;
+  closeModal('addPrepayModal');
+  renderAll();
+  toast('Prepayment logged!');
+}
+
+function deletePrepay(id) {
+  const p = state.prepayments.find(x=>x.id===id);
+  if (p) {
+    state.prepayments = state.prepayments.filter(x=>x.id!==id);
+    const debt = state.debts.find(d=>d.name===p.loan);
+    if (debt) debt.extraPaid = Math.max(0, debt.extraPaid - p.amt);
+  }
+  renderAll();
+  toast('Prepayment removed');
+}
+
+function addGoal() {
+  const name    = document.getElementById('goalName').value.trim();
+  const target  = parseFloat(document.getElementById('goalTarget').value);
+  const monthly = parseFloat(document.getElementById('goalMonthly').value);
+  if (!name || !target || !monthly) { toast('Please fill all fields', false); return; }
+  state.goals.push({ id: state.nextId++, name, target, monthly });
+  closeModal('addGoalModal');
+  renderAll();
+  toast('Goal added!');
+}
+
+function deleteGoal(id) {
+  state.goals = state.goals.filter(g=>g.id!==id);
+  renderAll();
+  toast('Goal removed');
+}
+
+// ═══════════════════════════════════════════
+// MODAL & UI
+// ═══════════════════════════════════════════
+function openModal(id) {
+  // Pre-fill dates
+  const today = new Date().toISOString().split('T')[0];
+  if (id==='addTxnModal') {
+    document.getElementById('txnDate').value = today;
+    document.getElementById('txnDesc').value = '';
+    document.getElementById('txnAmt').value = '';
+    document.getElementById('txnLockerRow').style.display = 'grid';
+  }
+  if (id==='addPrepayModal') {
+    document.getElementById('prepayDate').value = today;
+    document.getElementById('prepayAmt').value = '';
+    document.getElementById('prepayNotes').value = '';
+    const sel = document.getElementById('prepayLoan');
+    sel.innerHTML = state.debts.map(d=>`<option>${d.name}</option>`).join('');
+  }
+  if (id==='addDebtModal') {
+    ['debtName','debtPrincipal','debtRate','debtTenure','debtElapsed'].forEach(x=>document.getElementById(x).value='');
+    document.getElementById('debtExtraPaid').value = '0';
+  }
+  if (id==='addGoalModal') {
+    ['goalName','goalTarget','goalMonthly'].forEach(x=>document.getElementById(x).value='');
+  }
+  document.getElementById(id).classList.add('open');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// Close on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
+});
+
+function switchTab(name) {
+  document.querySelectorAll('.nav-tab').forEach((t,i) => {
+    const tabs = ['dashboard','ledger','debts','goals','report'];
+    t.classList.toggle('active', tabs[i]===name);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+function toast(msg, ok=true) {
+  const el = document.getElementById('toast');
+  const icon = el.querySelector('.toast-icon');
+  document.getElementById('toastMsg').textContent = msg;
+  icon.textContent = ok ? '✓' : '⚠';
+  el.className = 'toast ' + (ok ? 'success' : 'warning');
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+// ═══════════════════════════════════════════
+// EXPORT TO XLSX
+// ═══════════════════════════════════════════
+function exportXLSX() {
+  const e = calcEngine();
+  const wb = XLSX.utils.book_new();
+  const { year, month } = parseMonthStr(state.reportMonth);
+  const monthName = new Date(year, month-1, 1).toLocaleString('en-IN',{month:'long',year:'numeric'});
+  const txns = txnsForMonth(state.reportMonth);
+
+  // ── Sheet 1: Dashboard Summary ──
+  const dashData = [
+    ['FINANCE-PRO — Monthly Report', monthName],
+    [],
+    ['SAFETY BAR', `${Math.round(state.safetyBar*100)}%`],
+    [],
+    ['FINANCIAL SNAPSHOT', ''],
+    ['Category', 'Amount (₹)', '% of Income'],
+    ['Total Income', e.totalIncome, e.totalIncome>0?'100%':'0%'],
+    ['Fixed Expenses (Locked+Essential)', -e.fixedExp, e.totalIncome>0?(-e.fixedExp/e.totalIncome*100).toFixed(1)+'%':'0%'],
+    ['Locked Discretionary', -e.lockedDisc, e.totalIncome>0?(-e.lockedDisc/e.totalIncome*100).toFixed(1)+'%':'0%'],
+    [`Flexible × ${Math.round(state.safetyBar*100)}% Safety Bar`, -e.flexAdj, e.totalIncome>0?(-e.flexAdj/e.totalIncome*100).toFixed(1)+'%':'0%'],
+    ['Sinking Fund (Goals)', -e.sinking, e.totalIncome>0?(-e.sinking/e.totalIncome*100).toFixed(1)+'%':'0%'],
+    ['NET SURPLUS → PREPAYMENT', e.surplus, e.totalIncome>0?(e.surplus/e.totalIncome*100).toFixed(1)+'%':'0%'],
+    [],
+    ['RECOMMENDED PREPAYMENT', e.prepay],
+    ['TOTAL INTEREST SAVED (est.)', e.totalInterestSaved],
+  ];
+  const ws1 = XLSX.utils.aoa_to_sheet(dashData);
+  ws1['!cols'] = [{wch:38},{wch:18},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Dashboard');
+
+  // ── Sheet 2: Ledger ──
+  const ledgerRows = [
+    ['Date','Budget Month','Description','Category','Amount (₹)','Type','Locker','Essential'],
+    ...state.transactions.sort((a,b)=>a.date.localeCompare(b.date)).map(t => {
+      const bm = budgetMonth(t);
+      const bmStr = new Date(bm.year,bm.month-1,1).toLocaleString('en-IN',{month:'short',year:'numeric'});
+      return [t.date, bmStr, t.desc, t.cat, t.type==='Income'?t.amt:-t.amt, t.type, t.locker, t.essential];
+    }),
+  ];
+  const ws2 = XLSX.utils.aoa_to_sheet(ledgerRows);
+  ws2['!cols'] = [{wch:12},{wch:14},{wch:28},{wch:16},{wch:14},{wch:10},{wch:10},{wch:10}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Ledger');
+
+  // ── Sheet 3: Debt Registry ──
+  const debtRows = [
+    ['Loan Name','Principal (₹)','Rate (% p.a.)','Tenure (months)','Elapsed (months)','Remaining (months)','Monthly EMI (₹)','Extra Paid (₹)','Remaining Balance (₹)','Interest Saved (₹)','Avalanche Priority'],
+    ...e.sorted.map((d,i)=>[d.name, d.principal, d.rate, d.tenure, d.elapsed, d.remaining, Math.round(d.emi), d.extraPaid, Math.round(d.balance), Math.round(d.interestSaved), '#'+(i+1)+' (Avalanche)']),
+    [],
+    ['PREPAYMENT HISTORY'],
+    ['Date','Loan','Amount (₹)','Notes'],
+    ...state.prepayments.sort((a,b)=>a.date.localeCompare(b.date)).map(p=>[p.date,p.loan,p.amt,p.notes||'']),
+  ];
+  const ws3 = XLSX.utils.aoa_to_sheet(debtRows);
+  ws3['!cols'] = [{wch:22},{wch:14},{wch:14},{wch:16},{wch:16},{wch:18},{wch:16},{wch:14},{wch:20},{wch:18},{wch:18}];
+  XLSX.utils.book_append_sheet(wb, ws3, 'Debt Registry');
+
+  // ── Sheet 4: Goals ──
+  const goalRows = [
+    ['Goal Name','Target (₹)','Monthly Set-Aside (₹)','Months to Goal'],
+    ...state.goals.map(g=>[g.name, g.target, g.monthly, g.monthly>0?Math.ceil(g.target/g.monthly):'—']),
+    [],
+    ['TOTAL SINKING FUND / MONTH', state.goals.reduce((s,g)=>s+(g.monthly||0),0)],
+  ];
+  const ws4 = XLSX.utils.aoa_to_sheet(goalRows);
+  ws4['!cols'] = [{wch:28},{wch:14},{wch:22},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, ws4, 'Goals');
+
+  const fileName = `FinancePro_${monthName.replace(' ','_')}.xlsx`;
+  XLSX.writeFile(wb, fileName);
+  toast(`Downloaded ${fileName}`);
+}
+
+
+
+
+
+// ═══════════════════════════════════════════
+// RESET
+// ═══════════════════════════════════════════
+function resetAll() {
+  const fresh = defaultState();
+  Object.keys(state).forEach(k => delete state[k]);
+  Object.assign(state, fresh);
+  clearStorage();
+  document.getElementById('reportMonth').value = state.reportMonth;
+  document.getElementById('safetySlider').value = Math.round(state.safetyBar * 100);
+  // restore theme to dark
+  document.documentElement.setAttribute('data-theme', 'dark');
+  document.getElementById('themeToggle').textContent = '🌙';
+  closeModal('resetModal');
+  updateSortIcons();
+  renderAll();
+  toast('Reset to example data!');
+}
+
+// ═══════════════════════════════════════════
+// THEME TOGGLE
+// ═══════════════════════════════════════════
+function toggleTheme() {
+  const root = document.documentElement;
+  const isLight = root.getAttribute('data-theme') === 'light';
+  root.setAttribute('data-theme', isLight ? 'dark' : 'light');
+  document.getElementById('themeToggle').textContent = isLight ? '🌙' : '☀️';
+}
+
+// ═══════════════════════════════════════════
+// SORT
+// ═══════════════════════════════════════════
+function setSort(field) {
+  if (state.sort.field === field) {
+    state.sort.dir *= -1; // toggle direction
+  } else {
+    state.sort.field = field;
+    state.sort.dir = field === 'date' ? -1 : 1; // date default: newest first, amt: lowest first
+  }
+  updateSortIcons();
+  renderLedger();
+}
+
+function updateSortIcons() {
+  ['date','amt'].forEach(f => {
+    const el = document.getElementById('sort-' + f);
+    if (!el) return;
+    if (state.sort.field === f) {
+      el.textContent = state.sort.dir === 1 ? '↑' : '↓';
+    } else {
+      el.textContent = '';
+    }
+  });
+}
+
+// ═══════════════════════════════════════════
+// PATCH HELPERS — inline field edits
+// ═══════════════════════════════════════════
+function patchTxn(id, field, value) {
+  const t = state.transactions.find(x => x.id === id);
+  if (!t) return;
+  t[field] = value;
+  const bm = budgetMonth(t);
+  // update the budget month label in the same row without full re-render
+  const row = document.querySelector(`tr[data-id="${id}"]`);
+  if (row) {
+    const bmStr = new Date(bm.year, bm.month-1, 1).toLocaleString('en-IN',{month:'short',year:'numeric'});
+    const sub = row.querySelector('div[style*="font-size:10px"]');
+    if (sub) sub.textContent = '→ ' + bmStr;
+    // update amount color if type changed
+    const amtInput = row.querySelector('td.right input');
+    if (amtInput) amtInput.style.color = t.type==='Income' ? 'var(--income)' : 'var(--expense)';
+  }
+  renderKPIs(calcEngine());
+  renderSnapshot(calcEngine());
+  toast('Saved', true);
+}
+
+function patchDebt(id, field, value) {
+  const d = state.debts.find(x => x.id === id);
+  if (!d) return;
+  d[field] = value;
+  toast('Saved', true);
+}
+
+function patchGoal(id, field, value) {
+  const g = state.goals.find(x => x.id === id);
+  if (!g) return;
+  g[field] = value;
+  renderKPIs(calcEngine());
+  renderSnapshot(calcEngine());
+  toast('Saved', true);
+}
+
+// ═══════════════════════════════════════════
+// BALANCE INLINE EDIT
+// ═══════════════════════════════════════════
+function updateBalance(id, val) {
+  const d = state.debts.find(x => x.id === id);
+  if (!d) return;
+  const v = parseFloat(val);
+  if (isNaN(v) || v < 0) { toast('Enter a valid balance', false); return; }
+  d.manualBalance = v;
+  renderAll();
+  toast('Balance updated!');
+}
+
+// ═══════════════════════════════════════════
+// EDIT FUNCTIONS
+// ═══════════════════════════════════════════
+function editTxn(id) {
+  const t = state.transactions.find(x => x.id === id);
+  if (!t) return;
+  document.getElementById('eTxnId').value = id;
+  document.getElementById('eTxnDate').value = t.date;
+  document.getElementById('eTxnDesc').value = t.desc;
+  document.getElementById('eTxnAmt').value = t.amt;
+  document.getElementById('eTxnType').value = t.type;
+  document.getElementById('eTxnLockerRow').style.display = t.type === 'Expense' ? 'grid' : 'none';
+  document.getElementById('eTxnLocker').value = t.locker;
+  document.getElementById('eTxnEssential').value = t.essential;
+  const cat = document.getElementById('eTxnCat');
+  [...cat.options].forEach(o => o.selected = o.value === t.cat);
+  openModal('editTxnModal');
+}
+
+function saveEditTxn() {
+  const id  = parseInt(document.getElementById('eTxnId').value);
+  const t   = state.transactions.find(x => x.id === id);
+  if (!t) return;
+  const type = document.getElementById('eTxnType').value;
+  t.date      = document.getElementById('eTxnDate').value;
+  t.desc      = document.getElementById('eTxnDesc').value.trim();
+  t.cat       = document.getElementById('eTxnCat').value;
+  t.amt       = parseFloat(document.getElementById('eTxnAmt').value);
+  t.type      = type;
+  t.locker    = type === 'Income' ? 'Locked'  : document.getElementById('eTxnLocker').value;
+  t.essential = type === 'Income' ? 'Yes'     : document.getElementById('eTxnEssential').value;
+  if (!t.date || !t.desc || !t.amt || t.amt <= 0) { toast('Please fill all fields', false); return; }
+  closeModal('editTxnModal');
+  renderAll();
+  toast('Transaction updated!');
+}
+
+function editDebt(id) {
+  const d = state.debts.find(x => x.id === id);
+  if (!d) return;
+  document.getElementById('eDebtId').value      = id;
+  document.getElementById('eDebtName').value     = d.name;
+  document.getElementById('eDebtPrincipal').value= d.principal;
+  document.getElementById('eDebtRate').value     = d.rate;
+  document.getElementById('eDebtTenure').value   = d.tenure;
+  document.getElementById('eDebtElapsed').value  = d.elapsed;
+  document.getElementById('eDebtBalance').value  = d.manualBalance !== undefined ? d.manualBalance : '';
+  openModal('editDebtModal');
+}
+
+function saveEditDebt() {
+  const id = parseInt(document.getElementById('eDebtId').value);
+  const d  = state.debts.find(x => x.id === id);
+  if (!d) return;
+  d.name      = document.getElementById('eDebtName').value.trim();
+  d.principal = parseFloat(document.getElementById('eDebtPrincipal').value);
+  d.rate      = parseFloat(document.getElementById('eDebtRate').value);
+  d.tenure    = parseInt(document.getElementById('eDebtTenure').value);
+  d.elapsed   = parseInt(document.getElementById('eDebtElapsed').value) || 0;
+  const bal = parseFloat(document.getElementById('eDebtBalance').value);
+  if (!isNaN(bal) && bal >= 0) d.manualBalance = bal;
+  if (!d.name || !d.principal || !d.rate || !d.tenure) { toast('Please fill all fields', false); return; }
+  closeModal('editDebtModal');
+  renderAll();
+  toast('Loan updated!');
+}
+
+function editGoal(id) {
+  const g = state.goals.find(x => x.id === id);
+  if (!g) return;
+  document.getElementById('eGoalId').value      = id;
+  document.getElementById('eGoalName').value    = g.name;
+  document.getElementById('eGoalTarget').value  = g.target;
+  document.getElementById('eGoalMonthly').value = g.monthly;
+  openModal('editGoalModal');
+}
+
+function saveEditGoal() {
+  const id = parseInt(document.getElementById('eGoalId').value);
+  const g  = state.goals.find(x => x.id === id);
+  if (!g) return;
+  g.name    = document.getElementById('eGoalName').value.trim();
+  g.target  = parseFloat(document.getElementById('eGoalTarget').value);
+  g.monthly = parseFloat(document.getElementById('eGoalMonthly').value);
+  if (!g.name || !g.target || !g.monthly) { toast('Please fill all fields', false); return; }
+  closeModal('editGoalModal');
+  renderAll();
+  toast('Goal updated!');
+}
+
+function editPrepay(id) {
+  const p = state.prepayments.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('ePrepayId').value    = id;
+  document.getElementById('ePrepayDate').value  = p.date;
+  document.getElementById('ePrepayAmt').value   = p.amt;
+  document.getElementById('ePrepayNotes').value = p.notes || '';
+  const sel = document.getElementById('ePrepayLoan');
+  sel.innerHTML = state.debts.map(d => `<option${d.name===p.loan?' selected':''}>${d.name}</option>`).join('');
+  openModal('editPrepayModal');
+}
+
+function saveEditPrepay() {
+  const id = parseInt(document.getElementById('ePrepayId').value);
+  const p  = state.prepayments.find(x => x.id === id);
+  if (!p) return;
+  const oldAmt  = p.amt;
+  const oldLoan = p.loan;
+  p.date  = document.getElementById('ePrepayDate').value;
+  p.loan  = document.getElementById('ePrepayLoan').value;
+  p.amt   = parseFloat(document.getElementById('ePrepayAmt').value);
+  p.notes = document.getElementById('ePrepayNotes').value.trim();
+  if (!p.date || !p.loan || !p.amt) { toast('Please fill required fields', false); return; }
+  // Adjust extraPaid on debts
+  const oldDebt = state.debts.find(d => d.name === oldLoan);
+  if (oldDebt) oldDebt.extraPaid = Math.max(0, oldDebt.extraPaid - oldAmt);
+  const newDebt = state.debts.find(d => d.name === p.loan);
+  if (newDebt) newDebt.extraPaid += p.amt;
+  closeModal('editPrepayModal');
+  renderAll();
+  toast('Prepayment updated!');
+}
+// ═══════════════════════════════════════════
+// LOCAL STORAGE PERSISTENCE
+// ═══════════════════════════════════════════
+const STORAGE_KEY = 'financepro_v1';
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch(e) {
+    console.warn('Could not save to localStorage:', e);
+  }
+}
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return false;
+    const parsed = JSON.parse(saved);
+    // Merge into state in-place so all render fn references stay valid
+    Object.keys(state).forEach(k => delete state[k]);
+    Object.assign(state, parsed);
+    // Ensure sort field exists (in case saved state predates it)
+    if (!state.sort) state.sort = { field: 'date', dir: -1 };
+    return true;
+  } catch(e) {
+    console.warn('Could not load from localStorage:', e);
+    return false;
+  }
+}
+
+function clearStorage() {
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+// Load persisted state if available
+const hadSavedData = loadState();
+
+// Sync UI controls to loaded state
+document.getElementById('reportMonth').value = state.reportMonth;
+document.getElementById('safetySlider').value = Math.round(state.safetyBar * 100);
+
+// Show a welcome back toast if we restored data
+renderAll();
+updateSortIcons();
+if (hadSavedData) {
+  setTimeout(() => toast('💾 Your data has been restored'), 400);
+}
+</script>
+</body>
+</html>

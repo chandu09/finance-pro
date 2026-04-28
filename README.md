@@ -14,10 +14,10 @@ Uses the **Avalanche method** to aggressively eliminate debt.
 
 ## How to use
 **Option 1 — Use online:**
-👉 [Open Finance Pro](https://chandu09.github.io/finance-pro/Finance_Pro.html)
+👉 [Open Finance Pro](https://chandu09.github.io/finance-pro/index.html)
 
 **Option 2 — Run locally:**
-1. Download `Finance_Pro.html`
+1. Download `index.html`
 2. Open it in any browser
 3. No installation needed
 
